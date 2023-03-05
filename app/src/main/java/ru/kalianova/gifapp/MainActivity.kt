@@ -32,10 +32,24 @@ class MainActivity : AppCompatActivity() {
         initViewModel(retrofit, this@MainActivity, "", adapter)
 
         //SearchView implementation
+        var insideSearchQuery: Boolean
         val searchView = binding.searchView
         searchView.setOnQueryTextListener(object : OnQueryTextListener,
             androidx.appcompat.widget.SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(p0: String?): Boolean {
+                insideSearchQuery = true
+                val callback = onBackPressedDispatcher.addCallback(
+                    this@MainActivity,
+                    object : OnBackPressedCallback(true) {
+                        override fun handleOnBackPressed() {
+                            if (insideSearchQuery) {
+                                initViewModel(retrofit, this@MainActivity, "", adapter)
+                                insideSearchQuery = false
+                            }
+                            else
+                                finish()
+                        }
+                    })
                 initViewModel(retrofit, this@MainActivity, searchView.query.toString(), adapter)
                 return true
             }
@@ -44,13 +58,7 @@ class MainActivity : AppCompatActivity() {
                 return true
             }
 
-            val callback = onBackPressedDispatcher.addCallback(
-                this@MainActivity,
-                object : OnBackPressedCallback(true) {
-                    override fun handleOnBackPressed() {
-                        initViewModel(retrofit, this@MainActivity, "", adapter)
-                    }
-                })
+
         }
         )
     }
