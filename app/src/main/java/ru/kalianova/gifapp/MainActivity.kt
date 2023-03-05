@@ -1,25 +1,16 @@
 package ru.kalianova.gifapp
 
-import android.content.Context
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.util.Log
-import android.widget.GridLayout
-import android.widget.SearchView
 import android.widget.SearchView.OnQueryTextListener
 import android.widget.Toast
-import androidx.recyclerview.widget.GridLayoutManager
+import androidx.activity.OnBackPressedCallback
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
+import kotlinx.coroutines.launch
 import ru.kalianova.gifapp.databinding.ActivityMainBinding
 
 private lateinit var binding: ActivityMainBinding
-const val BASE_URL = "https://api.giphy.com/v1/"
-const val TAG = "MainActivity"
 const val API_KEY = "mGEdtb3cKvKzsSctLek5oLOhxS8P9YlX"
 
 class MainActivity : AppCompatActivity() {
@@ -29,64 +20,23 @@ class MainActivity : AppCompatActivity() {
         val view = binding.root
         setContentView(view)
 
+        //RecyclerView init
         val recyclerViewGifItems = binding.recyclerViewGifItems
-        val gifs = mutableListOf<GifDataObject>()
-        val adapter = GifDataAdapter(gifs, this)
-
+        val adapter = GifPagerAdapter()
         recyclerViewGifItems.adapter = adapter
         recyclerViewGifItems.setHasFixedSize(true)
         recyclerViewGifItems.layoutManager = LinearLayoutManager(this)
 
+        //Retrofit init
+        val retrofit = GetDataService.invoke()
+        initViewModel(retrofit, this@MainActivity, "", adapter)
 
-        //Retrofit
-        val retrofit =
-            Retrofit.Builder().baseUrl(BASE_URL).addConverterFactory(GsonConverterFactory.create())
-                .build()
-        val retrofitService = retrofit.create(GetDataService::class.java)
-
-        var startPosition = 0
-        //Retrofit getGifs
-        retrofitService.getGifs(API_KEY, startPosition).enqueue(object : Callback<GifDataResult?> {
-            override fun onResponse(
-                call: Call<GifDataResult?>, response: Response<GifDataResult?>
-            ) {
-                val body = response.body()
-                if (body == null) {
-                    Log.d(TAG, "onResponse: Body null")
-                }
-                gifs.addAll(body!!.data)
-                adapter.notifyItemRangeInserted(startPosition, 25)
-
-            }
-
-            override fun onFailure(call: Call<GifDataResult?>, t: Throwable) {
-
-            }
-        })
-
-
+        //SearchView implementation
         val searchView = binding.searchView
-        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener,
+        searchView.setOnQueryTextListener(object : OnQueryTextListener,
             androidx.appcompat.widget.SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(p0: String?): Boolean {
-                retrofitService.searchGifs(API_KEY, searchView.query.toString())
-                    .enqueue(object : Callback<GifDataResult?> {
-                        override fun onResponse(
-                            call: Call<GifDataResult?>, response: Response<GifDataResult?>
-                        ) {
-                            val body = response.body()
-                            if (body == null) {
-                                Log.d(TAG, "onResponse: Body null")
-                            }
-                            gifs.clear()
-                            gifs.addAll(body!!.data)
-                            adapter.notifyDataSetChanged()
-                        }
-
-                        override fun onFailure(call: Call<GifDataResult?>, t: Throwable) {
-
-                        }
-                    })
+                initViewModel(retrofit, this@MainActivity, searchView.query.toString(), adapter)
                 return true
             }
 
@@ -94,8 +44,34 @@ class MainActivity : AppCompatActivity() {
                 return true
             }
 
+            val callback = onBackPressedDispatcher.addCallback(
+                this@MainActivity,
+                object : OnBackPressedCallback(true) {
+                    override fun handleOnBackPressed() {
+                        initViewModel(retrofit, this@MainActivity, "", adapter)
+                    }
+                })
         }
-
         )
+    }
+}
+
+fun initViewModel(
+    retrofit: GetDataService,
+    context: AppCompatActivity,
+    q: String,
+    adapter: GifPagerAdapter
+) {
+    val gifRepository = GifsDataSource(retrofit, q)
+    val viewModel = GifLiveDataModel(gifRepository)
+    viewModel.errorManager.observe(context) {
+        Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+    }
+    context.lifecycleScope.launch {
+        viewModel.getGifsList().observe(context) {
+            it?.let {
+                adapter.submitData(context.lifecycle, it)
+            }
+        }
     }
 }

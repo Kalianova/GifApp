@@ -14,9 +14,9 @@
         android:theme="@style/Theme.GifApp"
         tools:targetApi="31">
         <activity
-            android:theme="@style/Theme.GifAppNoActionBar"
             android:name=".ActivityGifInfo"
-            android:exported="false" />
+            android:exported="false"
+            android:theme="@style/Theme.GifAppNoActionBar" />
         <activity
             android:name=".MainActivity"
             android:exported="true">

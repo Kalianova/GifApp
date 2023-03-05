@@ -3,7 +3,6 @@ package ru.kalianova.gifapp
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.opengl.Visibility
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.View
@@ -25,7 +24,7 @@ class ActivityGifInfo : AppCompatActivity() {
         val title = intent.getStringExtra("title")
         val username = intent.getStringExtra("username")
         var date = intent.getStringExtra("date")
-        date = "${date?.substring(8, 10)}.${date?.substring(5, 7)}.${date?.substring(0,4)}"
+        date = "${date?.substring(8, 10)}.${date?.substring(5, 7)}.${date?.substring(0, 4)}"
 
         binding.textViewGifInfoTitle.text = title
         if (username != "")
@@ -38,14 +37,15 @@ class ActivityGifInfo : AppCompatActivity() {
         circularProgressDrawable.strokeWidth = 5f
         circularProgressDrawable.centerRadius = 30f
         circularProgressDrawable.start()
-        Glide.with(this).load(url).placeholder(circularProgressDrawable).into(binding.imageViewGifInfo)
+        Glide.with(this).load(url).placeholder(circularProgressDrawable)
+            .into(binding.imageViewGifInfo)
 
         //Копирование ссылки на gif в буфер обмена при нажатии на картинку
-        binding.imageViewGifInfo.setOnClickListener{
+        binding.imageViewGifInfo.setOnClickListener {
             val clip: ClipData = ClipData.newPlainText("url", url)
             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             clipboard.setPrimaryClip(clip)
-            Toast.makeText(this, "Ссылка на gif-изображение скопирована",Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Ссылка на gif-изображение скопирована", Toast.LENGTH_SHORT).show()
         }
     }
 }
